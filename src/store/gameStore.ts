@@ -6,6 +6,7 @@ export interface Player {
   name: string;
   position: string;
   isStarter: boolean;
+  isCaptain: boolean;
   fouls: number;
   points: number;
   ejected: boolean;
