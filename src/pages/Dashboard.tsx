@@ -65,6 +65,7 @@ const Dashboard = () => {
       name: newPlayer.name,
       position: newPlayer.position,
       isStarter: false,
+      isCaptain: false,
       fouls: 0,
       points: 0,
       ejected: false,
