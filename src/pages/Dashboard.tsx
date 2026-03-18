@@ -200,6 +200,30 @@ const Dashboard = () => {
                     className="bg-secondary border-border"
                   />
                 </div>
+                {/* Logo Upload */}
+                <div className="flex items-center gap-2">
+                  {store[team].logoUrl && (
+                    <img src={store[team].logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span>Logo hochladen</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLogoUpload(team, file);
+                      }}
+                    />
+                  </label>
+                  {store[team].logoUrl && (
+                    <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => store.updateTeam(team, { logoUrl: undefined })}>
+                      Entfernen
+                    </Button>
+                  )}
+                </div>
 
                 {/* Player list */}
                 <div className="space-y-1 max-h-60 overflow-y-auto">
