@@ -126,6 +126,19 @@ const Dashboard = () => {
     doc.save(`spielbericht_${store.home.shortName}_vs_${store.away.shortName}.pdf`);
   };
 
+  const handleLogoUpload = (team: 'home' | 'away', file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      store.updateTeam(team, { logoUrl: e.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleShowLineup = () => {
+    store.setPhase('lineup');
+    store.setClockRunning(false);
+  };
+
   const phaseButtons: { label: string; phase: GamePhase }[] = [
     { label: 'LIVE', phase: 'live' },
     { label: 'HALBZEIT', phase: 'halftime' },
