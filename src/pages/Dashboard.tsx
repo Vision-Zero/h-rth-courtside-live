@@ -227,15 +227,27 @@ const Dashboard = () => {
 
                 {/* Player list */}
                 <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {store[team].players.map(p => (
+                {store[team].players.map(p => (
                     <div key={p.id} className="flex items-center gap-2 px-2 py-1 rounded bg-secondary/50 text-sm">
                       <span className="font-mono-clock text-primary w-8">#{p.number}</span>
-                      <span className="flex-1 text-foreground">{p.name}</span>
+                      <span className="flex-1 text-foreground">
+                        {p.isCaptain && <span className="text-primary font-bold">[C] </span>}
+                        {p.name}
+                      </span>
                       <span className="text-muted-foreground text-xs">{p.position}</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-status-error"
+                        className={`h-6 w-6 p-0 text-xs ${p.isCaptain ? 'text-primary' : 'text-muted-foreground'}`}
+                        title="Captain"
+                        onClick={() => store.updatePlayer(team, p.id, { isCaptain: !p.isCaptain })}
+                      >
+                        C
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
                         onClick={() => store.updatePlayer(team, p.id, { isStarter: !p.isStarter })}
                       >
                         {p.isStarter ? '★' : '☆'}
