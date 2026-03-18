@@ -81,7 +81,7 @@ const Dashboard = () => {
   const handleSubstitution = () => {
     if (!subOut || !subIn) return;
     store.triggerSubstitution({ team: subTeam, playerOut: subOut, playerIn: subIn });
-    setTimeout(() => store.clearSubstitution(), 5000);
+    setTimeout(() => store.clearSubstitution(), 8000);
     setSubOut('');
     setSubIn('');
   };
@@ -89,14 +89,14 @@ const Dashboard = () => {
   const handleTechFoul = () => {
     if (!techFoulName) return;
     store.triggerEvent({ type: 'technical', playerName: techFoulName, visible: true });
-    setTimeout(() => store.clearEvent(), 5000);
+    setTimeout(() => store.clearEvent(), 8000);
     setTechFoulName('');
   };
 
   const handleEjection = () => {
     if (!ejectionName) return;
     store.triggerEvent({ type: 'ejection', playerName: ejectionName, visible: true });
-    setTimeout(() => store.clearEvent(), 5000);
+    setTimeout(() => store.clearEvent(), 8000);
     setEjectionName('');
   };
 

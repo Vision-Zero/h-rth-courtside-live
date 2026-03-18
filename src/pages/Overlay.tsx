@@ -10,7 +10,7 @@ import TechnicalPause from '@/components/overlay/TechnicalPause';
 
 const Overlay = () => {
   const { phase } = useGameStore();
-  const showScoreboard = phase === 'live' || phase === 'timeout-home' || phase === 'timeout-away' || phase === 'technical-pause';
+  const showScoreboard = phase !== 'halftime';
 
   // Transparent background for OBS
   useEffect(() => {
