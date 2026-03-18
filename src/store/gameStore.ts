@@ -47,7 +47,7 @@ export interface EventPopup {
   visible: boolean;
 }
 
-export type GamePhase = 'pre-game' | 'live' | 'halftime' | 'timeout-home' | 'timeout-away' | 'technical-pause' | 'finished';
+export type GamePhase = 'pre-game' | 'lineup' | 'live' | 'halftime' | 'timeout-home' | 'timeout-away' | 'technical-pause' | 'finished';
 
 export interface GameState {
   phase: GamePhase;
