@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore, Player, GamePhase } from '@/store/gameStore';
-import { Play, Pause, RotateCcw, Plus, Minus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, RotateCcw, Plus, Minus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { jsPDF } from 'jspdf';
@@ -65,6 +65,7 @@ const Dashboard = () => {
       name: newPlayer.name,
       position: newPlayer.position,
       isStarter: false,
+      isCaptain: false,
       fouls: 0,
       points: 0,
       ejected: false,
@@ -123,6 +124,19 @@ const Dashboard = () => {
       y += 6;
     });
     doc.save(`spielbericht_${store.home.shortName}_vs_${store.away.shortName}.pdf`);
+  };
+
+  const handleLogoUpload = (team: 'home' | 'away', file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      store.updateTeam(team, { logoUrl: e.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleShowLineup = () => {
+    store.setPhase('lineup');
+    store.setClockRunning(false);
   };
 
   const phaseButtons: { label: string; phase: GamePhase }[] = [
@@ -186,18 +200,54 @@ const Dashboard = () => {
                     className="bg-secondary border-border"
                   />
                 </div>
+                {/* Logo Upload */}
+                <div className="flex items-center gap-2">
+                  {store[team].logoUrl && (
+                    <img src={store[team].logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span>Logo hochladen</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLogoUpload(team, file);
+                      }}
+                    />
+                  </label>
+                  {store[team].logoUrl && (
+                    <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => store.updateTeam(team, { logoUrl: undefined })}>
+                      Entfernen
+                    </Button>
+                  )}
+                </div>
 
                 {/* Player list */}
                 <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {store[team].players.map(p => (
+                {store[team].players.map(p => (
                     <div key={p.id} className="flex items-center gap-2 px-2 py-1 rounded bg-secondary/50 text-sm">
                       <span className="font-mono-clock text-primary w-8">#{p.number}</span>
-                      <span className="flex-1 text-foreground">{p.name}</span>
+                      <span className="flex-1 text-foreground">
+                        {p.isCaptain && <span className="text-primary font-bold">[C] </span>}
+                        {p.name}
+                      </span>
                       <span className="text-muted-foreground text-xs">{p.position}</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-status-error"
+                        className={`h-6 w-6 p-0 text-xs ${p.isCaptain ? 'text-primary' : 'text-muted-foreground'}`}
+                        title="Captain"
+                        onClick={() => store.updatePlayer(team, p.id, { isCaptain: !p.isCaptain })}
+                      >
+                        C
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
                         onClick={() => store.updatePlayer(team, p.id, { isStarter: !p.isStarter })}
                       >
                         {p.isStarter ? '★' : '☆'}
@@ -318,14 +368,24 @@ const Dashboard = () => {
                     </Button>
                   ))}
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="btn-press w-full text-xs"
-                  onClick={() => { store.setPhase('live'); store.setClockRunning(false); }}
-                >
-                  OVERLAY ZURÜCK
-                </Button>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button
+                    size="sm"
+                    variant={store.phase === 'lineup' ? 'default' : 'secondary'}
+                    className="btn-press text-xs"
+                    onClick={handleShowLineup}
+                  >
+                    <Users className="w-3 h-3 mr-1" /> STARTING 5
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="btn-press text-xs"
+                    onClick={() => { store.setPhase('live'); store.setClockRunning(false); }}
+                  >
+                    OVERLAY ZURÜCK
+                  </Button>
+                </div>
               </div>
 
               {/* Substitution */}

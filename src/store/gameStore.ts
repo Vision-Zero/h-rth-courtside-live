@@ -6,6 +6,7 @@ export interface Player {
   name: string;
   position: string;
   isStarter: boolean;
+  isCaptain: boolean;
   fouls: number;
   points: number;
   ejected: boolean;
@@ -46,7 +47,7 @@ export interface EventPopup {
   visible: boolean;
 }
 
-export type GamePhase = 'pre-game' | 'live' | 'halftime' | 'timeout-home' | 'timeout-away' | 'technical-pause' | 'finished';
+export type GamePhase = 'pre-game' | 'lineup' | 'live' | 'halftime' | 'timeout-home' | 'timeout-away' | 'technical-pause' | 'finished';
 
 export interface GameState {
   phase: GamePhase;
@@ -275,8 +276,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       quarter: 1,
       clockSeconds: 600,
       clockRunning: false,
-      home: { ...s.home, score: 0, fouls: 0, timeouts: s.home.maxTimeouts, players: s.home.players.map(p => ({ ...p, fouls: 0, points: 0, ejected: false })) },
-      away: { ...s.away, score: 0, fouls: 0, timeouts: s.away.maxTimeouts, players: s.away.players.map(p => ({ ...p, fouls: 0, points: 0, ejected: false })) },
+      home: { ...s.home, score: 0, fouls: 0, timeouts: s.home.maxTimeouts, players: s.home.players.map(p => ({ ...p, fouls: 0, points: 0, ejected: false, isCaptain: p.isCaptain })) },
+      away: { ...s.away, score: 0, fouls: 0, timeouts: s.away.maxTimeouts, players: s.away.players.map(p => ({ ...p, fouls: 0, points: 0, ejected: false, isCaptain: p.isCaptain })) },
       logs: [],
       substitution: null,
       eventPopup: null,

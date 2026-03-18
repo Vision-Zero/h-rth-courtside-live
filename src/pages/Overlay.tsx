@@ -7,10 +7,11 @@ import SubstitutionPopup from '@/components/overlay/SubstitutionPopup';
 import EventPopups from '@/components/overlay/EventPopups';
 import HalftimeScreen from '@/components/overlay/HalftimeScreen';
 import TechnicalPause from '@/components/overlay/TechnicalPause';
+import LineupScreen from '@/components/overlay/LineupScreen';
 
 const Overlay = () => {
   const { phase } = useGameStore();
-  const showScoreboard = phase !== 'halftime';
+  const showScoreboard = phase !== 'halftime' && phase !== 'lineup';
 
   // Transparent background for OBS
   useEffect(() => {
@@ -44,6 +45,7 @@ const Overlay = () => {
       <EventPopups />
       <HalftimeScreen />
       <TechnicalPause />
+      <LineupScreen />
     </div>
   );
 };
