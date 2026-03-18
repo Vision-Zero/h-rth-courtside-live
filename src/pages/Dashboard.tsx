@@ -368,14 +368,24 @@ const Dashboard = () => {
                     </Button>
                   ))}
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="btn-press w-full text-xs"
-                  onClick={() => { store.setPhase('live'); store.setClockRunning(false); }}
-                >
-                  OVERLAY ZURÜCK
-                </Button>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button
+                    size="sm"
+                    variant={store.phase === 'lineup' ? 'default' : 'secondary'}
+                    className="btn-press text-xs"
+                    onClick={handleShowLineup}
+                  >
+                    <Users className="w-3 h-3 mr-1" /> STARTING 5
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="btn-press text-xs"
+                    onClick={() => { store.setPhase('live'); store.setClockRunning(false); }}
+                  >
+                    OVERLAY ZURÜCK
+                  </Button>
+                </div>
               </div>
 
               {/* Substitution */}

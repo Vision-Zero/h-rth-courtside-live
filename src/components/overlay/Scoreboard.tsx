@@ -78,6 +78,13 @@ const Scoreboard = () => {
             {renderFoulDots(away.fouls)}
           </div>
         </div>
+        {away.logoUrl ? (
+          <img src={away.logoUrl} alt={away.name} className="w-10 h-10 object-contain" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center font-display text-xs text-muted-foreground">
+            {away.shortName}
+          </div>
+        )}
       </div>
     </div>
   );
