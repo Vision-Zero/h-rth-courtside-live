@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore, Player, GamePhase } from '@/store/gameStore';
-import { Play, Pause, RotateCcw, Plus, Minus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, RotateCcw, Plus, Minus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { jsPDF } from 'jspdf';
