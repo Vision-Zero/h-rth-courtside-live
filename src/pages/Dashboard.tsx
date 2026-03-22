@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore, Player, GamePhase } from '@/store/gameStore';
-import { Play, Pause, RotateCcw, Plus, Minus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp, Upload } from 'lucide-react';
+import { Play, Pause, RotateCcw, Plus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp, Upload, Database, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { jsPDF } from 'jspdf';
@@ -9,15 +9,17 @@ const Dashboard = () => {
   const store = useGameStore();
   const clockRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'setup' | 'live' | 'log'>('setup');
+  const [activeTab, setActiveTab] = useState<'match' | 'setup' | 'live' | 'log'>('match');
   const [subTeam, setSubTeam] = useState<'home' | 'away'>('home');
   const [subOut, setSubOut] = useState('');
   const [subIn, setSubIn] = useState('');
   const [techFoulName, setTechFoulName] = useState('');
   const [ejectionName, setEjectionName] = useState('');
-
-  // New player form
   const [newPlayer, setNewPlayer] = useState({ number: '', name: '', position: '', team: 'home' as 'home' | 'away' });
+
+  useEffect(() => {
+    store.fetchMatches();
+  }, []);
 
   // Clock logic
   useEffect(() => {
@@ -139,6 +141,22 @@ const Dashboard = () => {
     store.setClockRunning(false);
   };
 
+  const handleCreateMatch = async () => {
+    await store.createMatch();
+    setActiveTab('setup');
+  };
+
+  const handleLoadMatch = async (id: string) => {
+    await store.loadMatch(id);
+    setActiveTab('live');
+  };
+
+  const handleEndMatch = async () => {
+    handleWinner();
+    await store.endMatch();
+    store.fetchMatches();
+  };
+
   const phaseButtons: { label: string; phase: GamePhase }[] = [
     { label: 'LIVE', phase: 'live' },
     { label: 'HALBZEIT', phase: 'halftime' },
@@ -150,20 +168,103 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h1 className="font-display text-3xl tracking-wider text-primary">HBC BROADCASTING</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-3xl tracking-wider text-primary">HBC BROADCASTING</h1>
+            {store.matchId && (
+              <span className="text-xs font-mono-clock text-green-400 bg-green-400/10 px-2 py-1 rounded">
+                LIVE • {store.matchId.slice(0, 8)}
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
-            {(['setup', 'live', 'log'] as const).map(tab => (
+            {(['match', 'setup', 'live', 'log'] as const).map(tab => (
               <Button
                 key={tab}
                 variant={activeTab === tab ? 'default' : 'secondary'}
                 className="btn-press font-display tracking-wider"
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'setup' ? 'SETUP' : tab === 'live' ? 'LIVE' : 'PROTOKOLL'}
+                {tab === 'match' ? 'SPIELE' : tab === 'setup' ? 'SETUP' : tab === 'live' ? 'LIVE' : 'PROTOKOLL'}
               </Button>
             ))}
           </div>
         </div>
+
+        {/* MATCH TAB */}
+        {activeTab === 'match' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl tracking-wider text-primary">SPIELVERWALTUNG</h2>
+              <div className="flex gap-2">
+                <Button variant="secondary" className="btn-press" onClick={() => store.fetchMatches()}>
+                  <RefreshCw className="w-4 h-4 mr-1" /> AKTUALISIEREN
+                </Button>
+                <Button className="btn-press" onClick={handleCreateMatch}>
+                  <Plus className="w-4 h-4 mr-1" /> NEUES SPIEL
+                </Button>
+              </div>
+            </div>
+
+            {store.matchId && (
+              <div className="glass p-4 flex items-center justify-between" style={{ borderLeft: '3px solid hsl(var(--hbc-gold))' }}>
+                <div>
+                  <span className="font-display text-sm text-muted-foreground tracking-wider">AKTIVES SPIEL</span>
+                  <div className="font-mono-clock text-lg text-foreground mt-1">
+                    {store.home.name} {store.home.score} - {store.away.score} {store.away.name}
+                  </div>
+                  <span className="text-xs text-muted-foreground font-mono-clock">ID: {store.matchId}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="btn-press text-sm" onClick={() => setActiveTab('live')}>
+                    ZUM SPIEL
+                  </Button>
+                  <Button variant="destructive" className="btn-press text-sm" onClick={handleEndMatch}>
+                    SPIEL BEENDEN
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <span className="font-display text-sm tracking-wider text-muted-foreground">LETZTE SPIELE</span>
+              {store.matchList.length === 0 && (
+                <div className="glass p-6 text-center text-muted-foreground">
+                  <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>Keine Spiele vorhanden. Erstelle ein neues Spiel.</p>
+                </div>
+              )}
+              {store.matchList.map(m => (
+                <div key={m.id} className="glass p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className={`w-2 h-2 rounded-full ${m.status === 'active' ? 'bg-green-400 animate-pulse' : 'bg-muted-foreground'}`} />
+                    <div>
+                      <span className="font-mono-clock text-foreground">
+                        {m.homeName} {m.homeScore} - {m.awayScore} {m.awayName}
+                      </span>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(m.createdAt).toLocaleDateString('de-DE')} • {new Date(m.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                        {m.status === 'active' && <span className="text-green-400 ml-2">AKTIV</span>}
+                        {m.status === 'ended' && <span className="text-muted-foreground ml-2">BEENDET</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {m.status === 'active' && (
+                      <Button size="sm" className="btn-press text-xs" onClick={() => handleLoadMatch(m.id)}>
+                        FORTSETZEN
+                      </Button>
+                    )}
+                    {m.status === 'ended' && (
+                      <Button size="sm" variant="ghost" className="btn-press text-xs" onClick={() => handleLoadMatch(m.id)}>
+                        ANSEHEN
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* SETUP TAB */}
         {activeTab === 'setup' && (
@@ -174,31 +275,10 @@ const Dashboard = () => {
                   {team === 'home' ? 'HEIMTEAM' : 'GASTTEAM'}
                 </h2>
                 <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    placeholder="Teamname"
-                    value={store[team].name}
-                    onChange={e => store.updateTeam(team, { name: e.target.value })}
-                    className="bg-secondary border-border"
-                  />
-                  <Input
-                    placeholder="Kürzel (3)"
-                    maxLength={4}
-                    value={store[team].shortName}
-                    onChange={e => store.updateTeam(team, { shortName: e.target.value.toUpperCase() })}
-                    className="bg-secondary border-border"
-                  />
-                  <Input
-                    placeholder="Coach"
-                    value={store[team].coach}
-                    onChange={e => store.updateTeam(team, { coach: e.target.value })}
-                    className="bg-secondary border-border"
-                  />
-                  <Input
-                    placeholder="Co-Coach"
-                    value={store[team].coCoach}
-                    onChange={e => store.updateTeam(team, { coCoach: e.target.value })}
-                    className="bg-secondary border-border"
-                  />
+                  <Input placeholder="Teamname" value={store[team].name} onChange={e => store.updateTeam(team, { name: e.target.value })} className="bg-secondary border-border" />
+                  <Input placeholder="Kürzel (3)" maxLength={4} value={store[team].shortName} onChange={e => store.updateTeam(team, { shortName: e.target.value.toUpperCase() })} className="bg-secondary border-border" />
+                  <Input placeholder="Coach" value={store[team].coach} onChange={e => store.updateTeam(team, { coach: e.target.value })} className="bg-secondary border-border" />
+                  <Input placeholder="Co-Coach" value={store[team].coCoach} onChange={e => store.updateTeam(team, { coCoach: e.target.value })} className="bg-secondary border-border" />
                 </div>
                 {/* Logo Upload */}
                 <div className="flex items-center gap-2">
@@ -208,15 +288,7 @@ const Dashboard = () => {
                   <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <Upload className="w-4 h-4" />
                     <span>Logo hochladen</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) handleLogoUpload(team, file);
-                      }}
-                    />
+                    <input type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) handleLogoUpload(team, file); }} />
                   </label>
                   {store[team].logoUrl && (
                     <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => store.updateTeam(team, { logoUrl: undefined })}>
@@ -227,7 +299,7 @@ const Dashboard = () => {
 
                 {/* Player list */}
                 <div className="space-y-1 max-h-60 overflow-y-auto">
-                {store[team].players.map(p => (
+                  {store[team].players.map(p => (
                     <div key={p.id} className="flex items-center gap-2 px-2 py-1 rounded bg-secondary/50 text-sm">
                       <span className="font-mono-clock text-primary w-8">#{p.number}</span>
                       <span className="flex-1 text-foreground">
@@ -235,31 +307,9 @@ const Dashboard = () => {
                         {p.name}
                       </span>
                       <span className="text-muted-foreground text-xs">{p.position}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-6 w-6 p-0 text-xs ${p.isCaptain ? 'text-primary' : 'text-muted-foreground'}`}
-                        title="Captain"
-                        onClick={() => store.updatePlayer(team, p.id, { isCaptain: !p.isCaptain })}
-                      >
-                        C
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                        onClick={() => store.updatePlayer(team, p.id, { isStarter: !p.isStarter })}
-                      >
-                        {p.isStarter ? '★' : '☆'}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-status-error"
-                        onClick={() => store.removePlayer(team, p.id)}
-                      >
-                        ×
-                      </Button>
+                      <Button variant="ghost" size="sm" className={`h-6 w-6 p-0 text-xs ${p.isCaptain ? 'text-primary' : 'text-muted-foreground'}`} title="Captain" onClick={() => store.updatePlayer(team, p.id, { isCaptain: !p.isCaptain })}>C</Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => store.updatePlayer(team, p.id, { isStarter: !p.isStarter })}>{p.isStarter ? '★' : '☆'}</Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-status-error" onClick={() => store.removePlayer(team, p.id)}>×</Button>
                     </div>
                   ))}
                 </div>
@@ -297,13 +347,9 @@ const Dashboard = () => {
                         <span className="text-muted-foreground">{p.fouls}F</span>
                         <div className="flex gap-0.5">
                           {[1, 2, 3].map(pts => (
-                            <Button key={pts} size="sm" variant="secondary" className="h-6 w-7 p-0 text-xs btn-press" onClick={() => handleScore(team, pts, p)}>
-                              +{pts}
-                            </Button>
+                            <Button key={pts} size="sm" variant="secondary" className="h-6 w-7 p-0 text-xs btn-press" onClick={() => handleScore(team, pts, p)}>+{pts}</Button>
                           ))}
-                          <Button size="sm" variant="secondary" className="h-6 w-7 p-0 text-xs btn-press text-status-error" onClick={() => store.addFoul(team, p.id)}>
-                            F
-                          </Button>
+                          <Button size="sm" variant="secondary" className="h-6 w-7 p-0 text-xs btn-press text-status-error" onClick={() => store.addFoul(team, p.id)}>F</Button>
                         </div>
                       </div>
                     ))}
@@ -357,32 +403,16 @@ const Dashboard = () => {
                 <span className="font-display text-sm tracking-wider text-muted-foreground">SPIELPHASE</span>
                 <div className="grid grid-cols-3 gap-1">
                   {phaseButtons.map(pb => (
-                    <Button
-                      key={pb.phase}
-                      size="sm"
-                      variant={store.phase === pb.phase ? 'default' : 'secondary'}
-                      className="btn-press text-xs"
-                      onClick={() => { store.setPhase(pb.phase); if (pb.phase !== 'live') store.setClockRunning(false); }}
-                    >
+                    <Button key={pb.phase} size="sm" variant={store.phase === pb.phase ? 'default' : 'secondary'} className="btn-press text-xs" onClick={() => { store.setPhase(pb.phase); if (pb.phase !== 'live') store.setClockRunning(false); }}>
                       {pb.label}
                     </Button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-1">
-                  <Button
-                    size="sm"
-                    variant={store.phase === 'lineup' ? 'default' : 'secondary'}
-                    className="btn-press text-xs"
-                    onClick={handleShowLineup}
-                  >
+                  <Button size="sm" variant={store.phase === 'lineup' ? 'default' : 'secondary'} className="btn-press text-xs" onClick={handleShowLineup}>
                     <Users className="w-3 h-3 mr-1" /> STARTING 5
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="btn-press text-xs"
-                    onClick={() => { store.setPhase('live'); store.setClockRunning(false); }}
-                  >
+                  <Button size="sm" variant="secondary" className="btn-press text-xs" onClick={() => { store.setPhase('live'); store.setClockRunning(false); }}>
                     OVERLAY ZURÜCK
                   </Button>
                 </div>
