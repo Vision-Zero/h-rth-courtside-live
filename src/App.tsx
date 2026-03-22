@@ -5,6 +5,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import Overlay from "./pages/Overlay.tsx";
+import OverlayScore from "./pages/OverlayScore.tsx";
+import OverlayActions from "./pages/OverlayActions.tsx";
+import OverlaySponsor from "./pages/OverlaySponsor.tsx";
+import OverlaySubstitution from "./pages/OverlaySubstitution.tsx";
+import OverlayHalftime from "./pages/OverlayHalftime.tsx";
+import OverlayLineup from "./pages/OverlayLineup.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
