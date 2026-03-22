@@ -27,28 +27,30 @@ const Overlay = () => {
   }, []);
 
   return (
-    <div className="relative w-[1920px] h-[1080px] overflow-hidden" style={{ background: 'transparent' }}>
-      {/* Scoreboard top center */}
-      {showScoreboard && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
-          <Scoreboard />
-        </div>
-      )}
+    <div className="fixed inset-0 overflow-hidden" style={{ background: 'transparent' }}>
+      <div className="relative w-full h-full overflow-hidden">
+        {/* Scoreboard top center */}
+        {showScoreboard && (
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
+            <Scoreboard />
+          </div>
+        )}
 
-      {/* Sponsor bottom left */}
-      {showScoreboard && (
-        <div className="absolute bottom-6 left-6 z-10">
-          <SponsorTicker />
-        </div>
-      )}
+        {/* Sponsor bottom left */}
+        {showScoreboard && (
+          <div className="absolute bottom-6 left-6 z-10">
+            <SponsorTicker />
+          </div>
+        )}
 
-      {/* Overlays */}
-      <TimeoutOverlay />
-      <SubstitutionPopup />
-      <EventPopups />
-      <HalftimeScreen />
-      <TechnicalPause />
-      <LineupScreen />
+        {/* Overlays */}
+        <TimeoutOverlay />
+        <SubstitutionPopup />
+        <EventPopups />
+        <HalftimeScreen />
+        <TechnicalPause />
+        <LineupScreen />
+      </div>
     </div>
   );
 };
