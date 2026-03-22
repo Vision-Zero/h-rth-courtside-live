@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Player {
   id: string;
@@ -49,7 +50,21 @@ export interface EventPopup {
 
 export type GamePhase = 'pre-game' | 'lineup' | 'live' | 'halftime' | 'timeout-home' | 'timeout-away' | 'technical-pause' | 'finished';
 
+export interface MatchInfo {
+  id: string;
+  homeName: string;
+  awayName: string;
+  homeScore: number;
+  awayScore: number;
+  status: 'active' | 'ended';
+  createdAt: string;
+}
+
 export interface GameState {
+  // Match persistence
+  matchId: string | null;
+  matchList: MatchInfo[];
+
   phase: GamePhase;
   quarter: number;
   clockSeconds: number;
@@ -82,6 +97,13 @@ export interface GameState {
   removePlayer: (team: 'home' | 'away', playerId: string) => void;
   resetGame: () => void;
   setFullState: (state: Partial<GameState>) => void;
+
+  // Match management
+  createMatch: () => Promise<void>;
+  loadMatch: (id: string) => Promise<void>;
+  endMatch: () => Promise<void>;
+  fetchMatches: () => Promise<void>;
+  saveToDb: () => void;
 }
 
 const defaultTeam = (name: string, shortName: string): TeamData => ({
@@ -115,14 +137,44 @@ try {
   console.warn('BroadcastChannel not supported');
 }
 
+const getSerializableState = (state: any) => {
+  const { setPhase, setQuarter, setClockSeconds, setClockRunning, addScore, addFoul, callTimeout, setTimeoutCountdown, triggerSubstitution, clearSubstitution, triggerEvent, clearEvent, addLog, updateTeam, updatePlayer, addPlayer, removePlayer, resetGame, setFullState, createMatch, loadMatch, endMatch, fetchMatches, saveToDb, matchList, ...data } = state;
+  return data;
+};
+
 const broadcastState = (state: any) => {
   if (bc) {
-    const { setPhase, setQuarter, setClockSeconds, setClockRunning, addScore, addFoul, callTimeout, setTimeoutCountdown, triggerSubstitution, clearSubstitution, triggerEvent, clearEvent, addLog, updateTeam, updatePlayer, addPlayer, removePlayer, resetGame, setFullState, ...data } = state;
-    bc.postMessage({ type: 'STATE_SYNC', data });
+    bc.postMessage({ type: 'STATE_SYNC', data: getSerializableState(state) });
   }
 };
 
+// Debounced DB save
+let saveTimeout: number | null = null;
+const debouncedSave = (state: GameState) => {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = window.setTimeout(() => {
+    const { matchId } = state;
+    if (!matchId) return;
+    const serializable = getSerializableState(state);
+    supabase
+      .from('matches')
+      .update({
+        game_state: serializable,
+        home_name: state.home.name,
+        away_name: state.away.name,
+        home_score: state.home.score,
+        away_score: state.away.score,
+        status: state.phase === 'finished' ? 'ended' : 'active',
+      })
+      .eq('id', matchId)
+      .then();
+  }, 2000);
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
+  matchId: null,
+  matchList: [],
+
   phase: 'pre-game',
   quarter: 1,
   clockSeconds: 600,
@@ -135,10 +187,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   showSponsor: true,
   timeoutCountdown: 60,
 
-  setPhase: (phase) => set(s => { const ns = { ...s, phase }; broadcastState({ ...ns }); return ns; }),
-  setQuarter: (quarter) => set(s => { const ns = { ...s, quarter }; broadcastState(ns); return ns; }),
-  setClockSeconds: (clockSeconds) => set(s => { const ns = { ...s, clockSeconds }; broadcastState(ns); return ns; }),
-  setClockRunning: (clockRunning) => set(s => { const ns = { ...s, clockRunning }; broadcastState(ns); return ns; }),
+  setPhase: (phase) => set(s => { const ns = { ...s, phase }; broadcastState(ns); debouncedSave(ns as GameState); return ns; }),
+  setQuarter: (quarter) => set(s => { const ns = { ...s, quarter }; broadcastState(ns); debouncedSave(ns as GameState); return ns; }),
+  setClockSeconds: (clockSeconds) => set(s => { const ns = { ...s, clockSeconds }; broadcastState(ns); debouncedSave(ns as GameState); return ns; }),
+  setClockRunning: (clockRunning) => set(s => { const ns = { ...s, clockRunning }; broadcastState(ns); debouncedSave(ns as GameState); return ns; }),
 
   addScore: (team, points, playerName) => set(s => {
     const t = { ...s[team], score: s[team].score + points };
@@ -152,6 +204,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
     const ns = { ...s, [team]: t, logs: [log, ...s.logs] };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -171,6 +224,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
     const ns = { ...s, [team]: t, logs: [log, ...s.logs] };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -188,6 +242,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const phase: GamePhase = team === 'home' ? 'timeout-home' : 'timeout-away';
     const ns = { ...s, [team]: t, phase, timeoutCountdown: 60, clockRunning: false, logs: [log, ...s.logs] };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -204,6 +259,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
     const ns = { ...s, substitution, logs: [log, ...s.logs] };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -232,6 +288,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     const ns = { ...s, eventPopup, logs: log ? [log, ...s.logs] : s.logs };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -241,12 +298,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newLog = { ...log, id: crypto.randomUUID() };
     const ns = { ...s, logs: [newLog, ...s.logs] };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
   updateTeam: (team, data) => set(s => {
     const ns = { ...s, [team]: { ...s[team], ...data } };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -254,18 +313,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     const players = s[team].players.map(p => p.id === playerId ? { ...p, ...data } : p);
     const ns = { ...s, [team]: { ...s[team], players } };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
   addPlayer: (team, player) => set(s => {
     const ns = { ...s, [team]: { ...s[team], players: [...s[team].players, player] } };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
   removePlayer: (team, playerId) => set(s => {
     const ns = { ...s, [team]: { ...s[team], players: s[team].players.filter(p => p.id !== playerId) } };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
@@ -284,10 +346,94 @@ export const useGameStore = create<GameState>((set, get) => ({
       timeoutCountdown: 60,
     };
     broadcastState(ns);
+    debouncedSave(ns as GameState);
     return ns;
   }),
 
   setFullState: (data) => set(s => ({ ...s, ...data })),
+
+  // === Match Management ===
+  createMatch: async () => {
+    const s = get();
+    const serializable = getSerializableState(s);
+    const { data, error } = await supabase
+      .from('matches')
+      .insert({
+        game_state: serializable,
+        home_name: s.home.name,
+        away_name: s.away.name,
+        home_score: s.home.score,
+        away_score: s.away.score,
+        status: 'active',
+      })
+      .select('id')
+      .single();
+
+    if (!error && data) {
+      set({ matchId: data.id });
+      broadcastState({ ...get() });
+    }
+  },
+
+  loadMatch: async (id: string) => {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!error && data) {
+      const gs = data.game_state as any;
+      set(s => ({
+        ...s,
+        ...gs,
+        matchId: data.id,
+      }));
+      broadcastState(get());
+    }
+  },
+
+  endMatch: async () => {
+    const { matchId } = get();
+    if (!matchId) return;
+    const serializable = getSerializableState(get());
+    await supabase
+      .from('matches')
+      .update({
+        game_state: serializable,
+        status: 'ended',
+        home_score: get().home.score,
+        away_score: get().away.score,
+      })
+      .eq('id', matchId);
+    set({ matchId: null });
+  },
+
+  fetchMatches: async () => {
+    const { data } = await supabase
+      .from('matches')
+      .select('id, home_name, away_name, home_score, away_score, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (data) {
+      set({
+        matchList: data.map(m => ({
+          id: m.id,
+          homeName: m.home_name,
+          awayName: m.away_name,
+          homeScore: m.home_score,
+          awayScore: m.away_score,
+          status: m.status as 'active' | 'ended',
+          createdAt: m.created_at,
+        })),
+      });
+    }
+  },
+
+  saveToDb: () => {
+    debouncedSave(get() as GameState);
+  },
 }));
 
 // Listen for broadcasts from other tabs
@@ -298,3 +444,29 @@ if (bc) {
     }
   };
 }
+
+// On startup: check for active match in URL or load latest active
+const initMatch = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const matchIdParam = params.get('match');
+
+  if (matchIdParam) {
+    await useGameStore.getState().loadMatch(matchIdParam);
+    return;
+  }
+
+  // Auto-load latest active match
+  const { data } = await supabase
+    .from('matches')
+    .select('id')
+    .eq('status', 'active')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (data) {
+    await useGameStore.getState().loadMatch(data.id);
+  }
+};
+
+initMatch();
