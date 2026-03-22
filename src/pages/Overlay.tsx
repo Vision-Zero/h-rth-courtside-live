@@ -15,11 +15,14 @@ const Overlay = () => {
 
   // Transparent background for OBS
   useEffect(() => {
-    document.body.style.background = 'transparent';
-    document.documentElement.style.background = 'transparent';
+    document.documentElement.style.setProperty('background', 'transparent', 'important');
+    document.body.style.setProperty('background', 'transparent', 'important');
+    const root = document.getElementById('root');
+    if (root) root.style.setProperty('background', 'transparent', 'important');
     return () => {
-      document.body.style.background = '';
-      document.documentElement.style.background = '';
+      document.documentElement.style.removeProperty('background');
+      document.body.style.removeProperty('background');
+      if (root) root.style.removeProperty('background');
     };
   }, []);
 
