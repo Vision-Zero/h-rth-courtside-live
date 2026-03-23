@@ -190,8 +190,10 @@ const Dashboard = () => {
                 {tab === 'match' ? 'SPIELE' : tab === 'setup' ? 'SETUP' : tab === 'live' ? 'LIVE' : 'PROTOKOLL'}
               </Button>
             ))}
+            <Button variant="ghost" size="sm" className="btn-press text-muted-foreground" onClick={async () => { await supabase.auth.signOut(); navigate('/login'); }}>
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
-        </div>
 
         {/* MATCH TAB */}
         {activeTab === 'match' && (
