@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore, Player, GamePhase } from '@/store/gameStore';
-import { Play, Pause, RotateCcw, Plus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp, Upload, Database, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Play, Pause, RotateCcw, Plus, Clock, AlertTriangle, XCircle, Trophy, Users, FileText, ChevronDown, ChevronUp, Upload, Database, RefreshCw, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { jsPDF } from 'jspdf';
