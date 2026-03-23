@@ -73,6 +73,13 @@
     @apply bg-background text-foreground;
     font-family: var(--font-body);
   }
+  /* OBS overlay transparency */
+  html.overlay-mode,
+  html.overlay-mode body,
+  html.overlay-mode #root {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
 }
 
 @layer utilities {
