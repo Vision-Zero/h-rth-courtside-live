@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { jsPDF } from 'jspdf';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const store = useGameStore();
   const clockRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
