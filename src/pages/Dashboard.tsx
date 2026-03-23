@@ -194,6 +194,7 @@ const Dashboard = () => {
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
+        </div>
 
         {/* MATCH TAB */}
         {activeTab === 'match' && (
